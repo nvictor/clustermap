@@ -1,0 +1,50 @@
+name: macOS Release
+
+on:
+  push:
+    tags:
+      - "v*"   # Runs on version tags like v1.0.0
+
+jobs:
+  build:
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Set up Xcode
+        run: sudo xcode-select -s /Applications/Xcode.app
+
+      - name: Build and Export App
+        run: |
+            xcodebuild -scheme "Clustermap" -configuration Release -archivePath $PWD/build/Clustermap.xcarchive archive
+            xcodebuild -exportArchive \
+            -archivePath $PWD/build/Clustermap.xcarchive \
+            -exportOptionsPlist $PWD/Clustermap/Clustermap/ExportOptions.plist \
+            -exportPath $PWD/build \
+            -allowProvisioningUpdates \
+            -exportTeamID "${{ secrets.APPLE_TEAM_ID }}"
+
+      - name: Notarize app
+        run: |
+          xcrun notarytool submit "build/Clustermap.app" \
+            --apple-id "${{ secrets.APPLE_ID }}" \
+            --team-id "${{ secrets.APPLE_TEAM_ID }}" \
+            --password "${{ secrets.APP_SPECIFIC_PASSWORD }}" \
+            --wait
+
+          xcrun stapler staple "build/Clustermap.app"
+
+      - name: Create DMG
+        run: |
+          hdiutil create -volname "Clustermap" \
+            -srcfolder "build/Clustermap.app" \
+            -ov -format UDZO "Clustermap.dmg"
+
+      - name: Upload DMG to Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: Clustermap.dmg
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
