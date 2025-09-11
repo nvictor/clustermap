@@ -29,6 +29,11 @@ jobs:
           security unlock-keychain -p "" build.keychain
           security set-keychain-settings -t 3600 -l build.keychain
 
+      - name: Configure keychain for codesign
+        run: |
+          security set-key-partition-list -S apple-tool:,apple: -k "" build.keychain
+          export OTHER_CODE_SIGN_FLAGS="--timestamp=none --options=runtime"
+
       - name: Install Provisioning Profile
         run: |
           mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
