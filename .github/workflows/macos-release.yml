@@ -41,6 +41,7 @@ jobs:
             -scheme "Clustermap" \
             -configuration Release \
             -archivePath "$PWD/build/Clustermap.xcarchive" \
+            ARCHS=arm64 ONLY_ACTIVE_ARCH=NO \
             CODE_SIGN_IDENTITY="Developer ID Application: Victor Noagbodji (2DZ6D8C78T)" \
             PROVISIONING_PROFILE_SPECIFIER="Clustermap" \
             archive | xcpretty
