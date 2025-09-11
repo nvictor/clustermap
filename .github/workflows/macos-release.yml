@@ -3,8 +3,7 @@ name: macOS Release
 on:
   push:
     tags:
-      - "v*"   # Runs on version tags like v1.0.0
-
+      - "v*"   # Triggers on version tags like v1.0.0
   workflow_dispatch:
 
 jobs:
@@ -21,9 +20,18 @@ jobs:
       - name: Create build directory
         run: mkdir -p build
 
+      - name: Import Developer ID Certificate
+        run: |
+          echo "${{ secrets.DEVELOPER_ID_P12 }}" | base64 --decode > build/DeveloperID.p12
+          security create-keychain -p "" build.keychain
+          security import build/DeveloperID.p12 -k build.keychain -P "${{ secrets.DEVELOPER_ID_P12_PASSWORD }}" -T /usr/bin/codesign
+          security list-keychains -s build.keychain
+          security unlock-keychain -p "" build.keychain
+          security set-keychain-settings -t 3600 -l build.keychain
+
       - name: Build and Archive App
         run: |
-            xcodebuild -project "Clustermap/Clustermap.xcodeproj" \
+          xcodebuild -project "Clustermap/Clustermap.xcodeproj" \
             -scheme "Clustermap" \
             -configuration Release \
             -archivePath "$PWD/build/Clustermap.xcarchive" \
@@ -32,23 +40,21 @@ jobs:
 
       - name: Export App
         run: |
-            xcodebuild -exportArchive \
+          xcodebuild -exportArchive \
             -archivePath "$PWD/build/Clustermap.xcarchive" \
             -exportOptionsPlist "$PWD/Clustermap/Clustermap/ExportOptions.plist" \
             -exportPath "$PWD/build" \
-            -allowProvisioningUpdates
+            -allowProvisioningUpdates \
+            -exportTeamID "${{ secrets.APPLE_TEAM_ID }}"
 
       - name: Notarize app
         run: |
-          # Create a zip file for notarization (notarytool requires zip for apps)
           ditto -c -k --keepParent "build/Clustermap.app" "build/Clustermap.zip"
-          
           xcrun notarytool submit "build/Clustermap.zip" \
             --apple-id "${{ secrets.APPLE_ID }}" \
             --team-id "${{ secrets.APPLE_TEAM_ID }}" \
             --password "${{ secrets.APP_SPECIFIC_PASSWORD }}" \
             --wait
-
           xcrun stapler staple "build/Clustermap.app"
 
       - name: Create DMG
