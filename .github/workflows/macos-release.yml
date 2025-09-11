@@ -36,13 +36,14 @@ jobs:
 
       - name: Build and Archive App
         run: |
+          set -o pipefail
           xcodebuild -project "Clustermap/Clustermap.xcodeproj" \
             -scheme "Clustermap" \
             -configuration Release \
             -archivePath "$PWD/build/Clustermap.xcarchive" \
             CODE_SIGN_IDENTITY="Developer ID Application: Victor Noagbodji (2DZ6D8C78T)" \
             PROVISIONING_PROFILE_SPECIFIER="Clustermap" \
-            archive
+            archive | xcpretty
 
       - name: Export App
         run: |
