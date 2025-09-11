@@ -46,7 +46,7 @@ jobs:
             DEBUG_INFORMATION_FORMAT="dwarf" \
             CODE_SIGN_IDENTITY="Developer ID Application: Victor Noagbodji (2DZ6D8C78T)" \
             PROVISIONING_PROFILE_SPECIFIER="Clustermap" \
-            archive | xcpretty
+            archive
 
       - name: Export App
         run: |
