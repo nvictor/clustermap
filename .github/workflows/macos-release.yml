@@ -31,6 +31,7 @@ jobs:
 
       - name: Install Provisioning Profile
         run: |
+          mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
           echo "${{ secrets.CLUSTERMAP_PROVISIONING_PROFILE }}" | base64 --decode > ~/Library/MobileDevice/Provisioning\ Profiles/Clustermap.provisionprofile
 
       - name: Build and Archive App
