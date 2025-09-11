@@ -3,7 +3,7 @@ name: macOS Release
 on:
   push:
     tags:
-      - "v*"   # Triggers on version tags like v1.0.0
+      - "v*"
   workflow_dispatch:
 
 jobs:
@@ -29,13 +29,18 @@ jobs:
           security unlock-keychain -p "" build.keychain
           security set-keychain-settings -t 3600 -l build.keychain
 
+      - name: Install Provisioning Profile
+        run: |
+          echo "${{ secrets.CLUSTERMAP_PROVISIONING_PROFILE }}" | base64 --decode > ~/Library/MobileDevice/Provisioning\ Profiles/Clustermap.provisionprofile
+
       - name: Build and Archive App
         run: |
           xcodebuild -project "Clustermap/Clustermap.xcodeproj" \
             -scheme "Clustermap" \
             -configuration Release \
             -archivePath "$PWD/build/Clustermap.xcarchive" \
-            -allowProvisioningUpdates \
+            CODE_SIGN_IDENTITY="Developer ID Application: Victor Noagbodji (2DZ6D8C78T)" \
+            PROVISIONING_PROFILE_SPECIFIER="Clustermap" \
             archive
 
       - name: Export App
@@ -43,9 +48,7 @@ jobs:
           xcodebuild -exportArchive \
             -archivePath "$PWD/build/Clustermap.xcarchive" \
             -exportOptionsPlist "$PWD/Clustermap/Clustermap/ExportOptions.plist" \
-            -exportPath "$PWD/build" \
-            -allowProvisioningUpdates \
-            -exportTeamID "${{ secrets.APPLE_TEAM_ID }}"
+            -exportPath "$PWD/build"
 
       - name: Notarize app
         run: |
