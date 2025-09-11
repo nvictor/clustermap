@@ -6,7 +6,7 @@ on:
       - "v*"   # Runs on version tags like v1.0.0
 
   workflow_dispatch:
-    
+
 jobs:
   build:
     runs-on: macos-latest
@@ -27,6 +27,7 @@ jobs:
             -scheme "Clustermap" \
             -configuration Release \
             -archivePath "$PWD/build/Clustermap.xcarchive" \
+            -allowProvisioningUpdates \
             archive
 
       - name: Export App
