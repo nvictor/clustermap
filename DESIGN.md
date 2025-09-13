@@ -11,22 +11,22 @@ Clustermap is a native macOS application that visualizes Kubernetes cluster reso
 ### High-Level Architecture
 
 ```
-┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
-│   SwiftUI Views │────│   ViewModels     │────│    Services     │
-│                 │    │                  │    │                 │
-│ • TreemapView   │    │ • ClusterViewModel│    │ • ClusterService│
-│ • ContentView   │    │                  │    │ • Client        │
-│ • Inspector     │    │                  │    │ • ConfigLoader  │
-└─────────────────┘    └──────────────────┘    └─────────────────┘
-                                │                        │
-                                │                        │
-                        ┌──────────────────┐    ┌─────────────────┐
-                        │     Models       │    │   External      │
-                        │                  │    │                 │
-                        │ • TreeNode       │    │ • Kubernetes    │
-                        │ • KubeResources  │    │   API Server    │
-                        │ • ClusterSnapshot│    │ • Kubeconfig    │
-                        └──────────────────┘    └─────────────────┘
+┌─────────────────┐    ┌────────────────────┐    ┌──────────────────┐
+│   SwiftUI Views │────│   ViewModels       │────│    Services      │
+│                 │    │                    │    │                  │
+│ • TreemapView   │    │ • ClusterViewModel │    │ • ClusterService │
+│ • ContentView   │    │                    │    │ • Client         │
+│ • Inspector     │    │                    │    │ • ConfigLoader   │
+└─────────────────┘    └────────────────────┘    └──────────────────┘
+                                │                         │
+                                │                         │
+                        ┌───────────────────┐    ┌─────────────────┐
+                        │     Models        │    │   External      │
+                        │                   │    │                 │
+                        │ • TreeNode        │    │ • Kubernetes    │
+                        │ • KubeResources   │    │   API Server    │
+                        │ • ClusterSnapshot │    │ • Kubeconfig    │
+                        └───────────────────┘    └─────────────────┘
 ```
 
 ### MVVM Pattern
