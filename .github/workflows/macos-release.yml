@@ -34,24 +34,10 @@ jobs:
           security set-key-partition-list -S apple-tool:,apple: -k "" build.keychain
           export OTHER_CODE_SIGN_FLAGS="--timestamp=none --options=runtime"
 
-      # - name: Install Provisioning Profile
-      #   run: |
-      #     mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
-      #     echo "${{ secrets.CLUSTERMAP_PROVISIONING_PROFILE }}" | base64 --decode > ~/Library/MobileDevice/Provisioning\ Profiles/Clustermap.provisionprofile
-
-      # - name: Build and Archive App
-      #   run: |
-      #     set -o pipefail
-      #     xcodebuild -project "Clustermap/Clustermap.xcodeproj" \
-      #       -scheme "Clustermap" \
-      #       -configuration Release \
-      #       -archivePath "$PWD/build/Clustermap.xcarchive" \
-      #       -destination "platform=macOS,arch=arm64" \
-      #       ARCHS=arm64 ONLY_ACTIVE_ARCH=YES \
-      #       DEBUG_INFORMATION_FORMAT="dwarf" \
-      #       CODE_SIGN_IDENTITY="Developer ID Application: Victor Noagbodji (2DZ6D8C78T)" \
-      #       PROVISIONING_PROFILE_SPECIFIER="Clustermap" \
-      #       archive
+      - name: Install Provisioning Profile
+        run: |
+          mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
+          echo "${{ secrets.CLUSTERMAP_PROVISIONING_PROFILE }}" | base64 --decode > ~/Library/MobileDevice/Provisioning\ Profiles/Clustermap.provisionprofile
 
       - name: Build and Archive App
         run: |
@@ -64,6 +50,7 @@ jobs:
             ARCHS=arm64 ONLY_ACTIVE_ARCH=YES \
             DEBUG_INFORMATION_FORMAT="dwarf" \
             CODE_SIGN_IDENTITY="Developer ID Application: Victor Noagbodji (2DZ6D8C78T)" \
+            PROVISIONING_PROFILE_SPECIFIER="Clustermap" \
             archive
 
       - name: Export App
