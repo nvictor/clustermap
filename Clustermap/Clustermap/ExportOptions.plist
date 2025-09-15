@@ -15,11 +15,11 @@
     <string>Developer ID Application: Victor Noagbodji (2DZ6D8C78T)</string>
 
     <!-- Map bundle IDs to provisioning profile names -->
-    <key>provisioningProfiles</key>
+    <!-- <key>provisioningProfiles</key>
     <dict>
         <key>com.mellowfleet.Clustermap</key>
         <string>Clustermap</string>
-    </dict>
+    </dict> -->
 
     <key>architectures</key>
     <array>
