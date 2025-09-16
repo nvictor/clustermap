@@ -32,7 +32,6 @@ jobs:
       - name: Configure keychain for codesign
         run: |
           security set-key-partition-list -S apple-tool:,apple: -k "" build.keychain
-          export OTHER_CODE_SIGN_FLAGS="--timestamp=none --options=runtime"
 
       - name: Install Provisioning Profile
         run: |
@@ -49,6 +48,8 @@ jobs:
             -destination "platform=macOS,arch=arm64" \
             ARCHS=arm64 ONLY_ACTIVE_ARCH=YES \
             DEBUG_INFORMATION_FORMAT="dwarf" \
+            ENABLE_HARDENED_RUNTIME=YES \
+            CODE_SIGN_ENTITLEMENTS="Clustermap/Clustermap/Clustermap.entitlements" \
             CODE_SIGN_IDENTITY="Developer ID Application: Victor Noagbodji (2DZ6D8C78T)" \
             PROVISIONING_PROFILE_SPECIFIER="Clustermap" \
             archive
