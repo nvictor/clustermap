@@ -24,11 +24,41 @@ final class TLSDelegate: NSObject, URLSessionDelegate {
     func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?)
     {
         if let error = error {
+            let nsError = error as NSError
             Task { @MainActor in
                 LogService.shared.log(
-                    "URLSession task completed with error: \(error.localizedDescription)",
+                    "URLSession task completed with error: \(error.localizedDescription), domain: \(nsError.domain), code: \(nsError.code)",
                     type: .error
                 )
+
+                // Log additional details for SSL errors
+                if nsError.domain == NSURLErrorDomain {
+                    let errorCode = nsError.code
+                    let errorName =
+                        switch errorCode {
+                        case NSURLErrorSecureConnectionFailed: "NSURLErrorSecureConnectionFailed"
+                        case NSURLErrorServerCertificateHasBadDate:
+                            "NSURLErrorServerCertificateHasBadDate"
+                        case NSURLErrorServerCertificateUntrusted:
+                            "NSURLErrorServerCertificateUntrusted"
+                        case NSURLErrorServerCertificateHasUnknownRoot:
+                            "NSURLErrorServerCertificateHasUnknownRoot"
+                        case NSURLErrorServerCertificateNotYetValid:
+                            "NSURLErrorServerCertificateNotYetValid"
+                        case NSURLErrorClientCertificateRejected:
+                            "NSURLErrorClientCertificateRejected"
+                        case NSURLErrorClientCertificateRequired:
+                            "NSURLErrorClientCertificateRequired"
+                        default: "Unknown SSL error (\(errorCode))"
+                        }
+                    LogService.shared.log("SSL Error type: \(errorName)", type: .error)
+                }
+
+                if let userInfo = nsError.userInfo as? [String: Any] {
+                    for (key, value) in userInfo {
+                        LogService.shared.log("Error userInfo[\(key)]: \(value)", type: .info)
+                    }
+                }
             }
         }
     }
@@ -38,6 +68,13 @@ final class TLSDelegate: NSObject, URLSessionDelegate {
         didReceive challenge: URLAuthenticationChallenge,
         completionHandler: @escaping (URLSession.AuthChallengeDisposition, URLCredential?) -> Void
     ) {
+        Task { @MainActor in
+            LogService.shared.log(
+                "Received authentication challenge: method=\(challenge.protectionSpace.authenticationMethod), host=\(challenge.protectionSpace.host), port=\(challenge.protectionSpace.port)",
+                type: .info
+            )
+        }
+
         let result =
             switch challenge.protectionSpace.authenticationMethod {
             case NSURLAuthenticationMethodServerTrust:
@@ -45,8 +82,22 @@ final class TLSDelegate: NSObject, URLSessionDelegate {
             case NSURLAuthenticationMethodClientCertificate:
                 handleClientCertificate(challenge)
             default:
+                Task { @MainActor in
+                    LogService.shared.log(
+                        "Unhandled authentication method: \(challenge.protectionSpace.authenticationMethod)",
+                        type: .info
+                    )
+                }
                 (URLSession.AuthChallengeDisposition.performDefaultHandling, nil as URLCredential?)
             }
+
+        Task { @MainActor in
+            LogService.shared.log(
+                "Authentication challenge result: disposition=\(result.0), hasCredential=\(result.1 != nil)",
+                type: .info
+            )
+        }
+
         completionHandler(result.0, result.1)
     }
 
