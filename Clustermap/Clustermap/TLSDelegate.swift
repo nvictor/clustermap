@@ -48,15 +48,32 @@ final class TLSDelegate: NSObject, URLSessionDelegate {
             return (.cancelAuthenticationChallenge, nil)
         }
 
-        let shouldAcceptTrust = insecure || validateWithCustomCA(trust)
-
-        if shouldAcceptTrust {
+        // If insecure mode is enabled, accept any certificate
+        if insecure {
             return (.useCredential, URLCredential(trust: trust))
-        } else if caCert != nil {
-            return (.cancelAuthenticationChallenge, nil)
-        } else {
-            return (.performDefaultHandling, nil)
         }
+
+        // Try to validate with custom CA if available
+        if caCert != nil {
+            let isValid = validateWithCustomCA(trust)
+            if isValid {
+                return (.useCredential, URLCredential(trust: trust))
+            } else {
+                return (.cancelAuthenticationChallenge, nil)
+            }
+        }
+
+        // For cloud providers (like GKE) without custom CA, try more permissive validation
+        let hostname = challenge.protectionSpace.host
+        if isCloudProvider(hostname) {
+            let isValid = validateForCloudProvider(trust, hostname: hostname)
+            if isValid {
+                return (.useCredential, URLCredential(trust: trust))
+            }
+        }
+
+        // Fall back to default system validation
+        return (.performDefaultHandling, nil)
     }
 
     private func validateWithCustomCA(_ trust: SecTrust) -> Bool {
@@ -78,6 +95,66 @@ final class TLSDelegate: NSObject, URLSessionDelegate {
             Task { @MainActor in
                 LogService.shared.log(
                     "Server trust validation failed: \(errorDescription)", type: .error)
+            }
+        }
+
+        return isValid
+    }
+
+    private func isCloudProvider(_ hostname: String) -> Bool {
+        let cloudProviderPatterns = [
+            // Google Cloud (GKE)
+            "\\.googleapis\\.com$",
+            "\\.gke\\.goog$",
+            "\\d+\\.\\d+\\.\\d+\\.\\d+",    // IP addresses (common for GKE)
+            // AWS (EKS)
+            "\\.eks\\.amazonaws\\.com$",
+            "\\.elb\\.amazonaws\\.com$",
+            // Azure (AKS)
+            "\\.azmk8s\\.io$",
+            "\\.azure\\.com$",
+            // DigitalOcean
+            "\\.k8s\\.ondigitalocean\\.com$",
+        ]
+
+        for pattern in cloudProviderPatterns {
+            if let regex = try? NSRegularExpression(pattern: pattern, options: .caseInsensitive),
+                regex.firstMatch(
+                    in: hostname, options: [],
+                    range: NSRange(location: 0, length: hostname.utf16.count)) != nil
+            {
+                return true
+            }
+        }
+        return false
+    }
+
+    private func validateForCloudProvider(_ trust: SecTrust, hostname: String) -> Bool {
+        // For cloud providers, use a more permissive SSL policy that doesn't require
+        // strict certificate chain validation but still validates the certificate signature
+        let policy = SecPolicyCreateSSL(true, hostname as CFString)
+        SecTrustSetPolicies(trust, [policy] as CFArray)
+
+        // Allow system root certificates
+        SecTrustSetAnchorCertificatesOnly(trust, false)
+
+        var error: CFError?
+        let isValid = SecTrustEvaluateWithError(trust, &error)
+
+        if !isValid {
+            let errorDescription = error?.localizedDescription ?? "Unknown error"
+            Task { @MainActor in
+                LogService.shared.log(
+                    "Cloud provider certificate validation failed for \(hostname): \(errorDescription)",
+                    type: .error
+                )
+            }
+        } else {
+            Task { @MainActor in
+                LogService.shared.log(
+                    "Cloud provider certificate validation succeeded for \(hostname)",
+                    type: .info
+                )
             }
         }
 
