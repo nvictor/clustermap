@@ -20,62 +20,11 @@ final class TLSDelegate: NSObject, URLSessionDelegate {
         self.insecure = insecure
     }
 
-    // Add delegate method to catch and log SSL errors at the URLSession level
-    func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?)
-    {
-        if let error = error {
-            let nsError = error as NSError
-            Task { @MainActor in
-                LogService.shared.log(
-                    "URLSession task completed with error: \(error.localizedDescription), domain: \(nsError.domain), code: \(nsError.code)",
-                    type: .error
-                )
-
-                // Log additional details for SSL errors
-                if nsError.domain == NSURLErrorDomain {
-                    let errorCode = nsError.code
-                    let errorName: String
-                    switch errorCode {
-                    case NSURLErrorSecureConnectionFailed:
-                        errorName = "NSURLErrorSecureConnectionFailed"
-                    case NSURLErrorServerCertificateHasBadDate:
-                        errorName = "NSURLErrorServerCertificateHasBadDate"
-                    case NSURLErrorServerCertificateUntrusted:
-                        errorName = "NSURLErrorServerCertificateUntrusted"
-                    case NSURLErrorServerCertificateHasUnknownRoot:
-                        errorName = "NSURLErrorServerCertificateHasUnknownRoot"
-                    case NSURLErrorServerCertificateNotYetValid:
-                        errorName = "NSURLErrorServerCertificateNotYetValid"
-                    case NSURLErrorClientCertificateRejected:
-                        errorName = "NSURLErrorClientCertificateRejected"
-                    case NSURLErrorClientCertificateRequired:
-                        errorName = "NSURLErrorClientCertificateRequired"
-                    default:
-                        errorName = "Unknown SSL error (\(errorCode))"
-                    }
-                    LogService.shared.log("SSL Error type: \(errorName)", type: .error)
-                }
-
-                let userInfo = nsError.userInfo
-                for (key, value) in userInfo {
-                    LogService.shared.log("Error userInfo[\(key)]: \(value)", type: .info)
-                }
-            }
-        }
-    }
-
     func urlSession(
         _ session: URLSession,
         didReceive challenge: URLAuthenticationChallenge,
         completionHandler: @escaping (URLSession.AuthChallengeDisposition, URLCredential?) -> Void
     ) {
-        Task { @MainActor in
-            LogService.shared.log(
-                "Received authentication challenge: method=\(challenge.protectionSpace.authenticationMethod), host=\(challenge.protectionSpace.host), port=\(challenge.protectionSpace.port)",
-                type: .info
-            )
-        }
-
         let result: (URLSession.AuthChallengeDisposition, URLCredential?)
         switch challenge.protectionSpace.authenticationMethod {
         case NSURLAuthenticationMethodServerTrust:
@@ -83,28 +32,8 @@ final class TLSDelegate: NSObject, URLSessionDelegate {
         case NSURLAuthenticationMethodClientCertificate:
             result = handleClientCertificate(challenge)
         default:
-            Task { @MainActor in
-                LogService.shared.log(
-                    "Unhandled authentication method: \(challenge.protectionSpace.authenticationMethod)",
-                    type: .info
-                )
-                LogService.shared.log(
-                    "Using default handling for unhandled host: \(challenge.protectionSpace.host)",
-                    type: .info
-                )
-            }
-            result = (
-                URLSession.AuthChallengeDisposition.performDefaultHandling, nil as URLCredential?
-            )
+            result = (.performDefaultHandling, nil)
         }
-
-        Task { @MainActor in
-            LogService.shared.log(
-                "Authentication challenge result: disposition=\(result.0), hasCredential=\(result.1 != nil)",
-                type: .info
-            )
-        }
-
         completionHandler(result.0, result.1)
     }
 
@@ -113,73 +42,24 @@ final class TLSDelegate: NSObject, URLSessionDelegate {
     ) {
         guard let trust = challenge.protectionSpace.serverTrust else {
             Task { @MainActor in
-                LogService.shared.log(
-                    "Server trust challenge failed: no server trust object.", type: .error)
+                LogService.shared.log("Server trust challenge failed: no server trust object.", type: .error)
             }
             return (.cancelAuthenticationChallenge, nil)
         }
 
-        // If insecure mode is enabled, accept any certificate
+        // For minikube/local dev, insecure is often true.
         if insecure {
-            Task { @MainActor in
-                LogService.shared.log(
-                    "Insecure mode: Skipping all TLS validation for \(challenge.protectionSpace.host)",
-                    type: .info
-                )
-            }
             return (.useCredential, URLCredential(trust: trust))
         }
 
-        let hostname = challenge.protectionSpace.host
-
-        // Try to validate with custom CA if available
-        if caCert != nil {
-            let isValid = validateWithCustomCA(trust)
-            if isValid {
-                return (.useCredential, URLCredential(trust: trust))
-            }
-
-            // If custom CA validation failed but this is a cloud provider,
-            // try more permissive validation as fallback
-            if isCloudProvider(hostname) {
-                Task { @MainActor in
-                    LogService.shared.log(
-                        "Custom CA validation failed, trying cloud provider fallback for \(hostname)",
-                        type: .info
-                    )
-                }
-                let isValidFallback = validateForCloudProvider(trust, hostname: hostname)
-                if isValidFallback {
-                    Task { @MainActor in
-                        LogService.shared.log(
-                            "Successfully created URLCredential for cloud provider \(hostname)",
-                            type: .info
-                        )
-                    }
-                    return (.useCredential, URLCredential(trust: trust))
-                }
-            }
-
-            // Custom CA validation failed and no successful fallback
-            return (.cancelAuthenticationChallenge, nil)
+        // For GKE with a custom CA.
+        if validateWithCustomCA(trust) {
+            return (.useCredential, URLCredential(trust: trust))
         }
 
-        // For cloud providers (like GKE) without custom CA, try permissive validation
-        if isCloudProvider(hostname) {
-            Task { @MainActor in
-                LogService.shared.log(
-                    "Cloud provider detected (\(hostname)): Using permissive certificate validation",
-                    type: .info
-                )
-            }
-            let isValid = validateForCloudProvider(trust, hostname: hostname)
-            if isValid {
-                return (.useCredential, URLCredential(trust: trust))
-            }
-        }
-
-        // Fall back to default system validation
-        return (.performDefaultHandling, nil)
+        // If custom CA validation fails, or if there's no custom CA,
+        // cancel the challenge. We don't want to fall back to system trust.
+        return (.cancelAuthenticationChallenge, nil)
     }
 
     private func validateWithCustomCA(_ trust: SecTrust) -> Bool {
@@ -187,106 +67,17 @@ final class TLSDelegate: NSObject, URLSessionDelegate {
 
         SecTrustSetAnchorCertificates(trust, [ca] as CFArray)
         SecTrustSetAnchorCertificatesOnly(trust, true)
-        // When connecting to an IP, the hostname check will fail.
-        // Since we are explicitly trusting the CA from the kubeconfig,
-        // we can skip the hostname check.
-        Task { @MainActor in
-            LogService.shared.log(
-                "Custom CA validation: Skipping hostname validation (using kubeconfig CA)",
-                type: .info
-            )
-        }
-        SecTrustSetPolicies(trust, SecPolicyCreateSSL(true, nil))
+        // For GKE and other cloud providers, a basic X.509 policy is more reliable
+        // than a strict SSL policy, as we are already trusting the custom CA.
+        SecTrustSetPolicies(trust, SecPolicyCreateBasicX509())
 
         var error: CFError?
         let isValid = SecTrustEvaluateWithError(trust, &error)
 
         if !isValid {
-            let errorDescription = String(
-                describing: error?.localizedDescription ?? "Unknown error")
+            let errorDescription = String(describing: error?.localizedDescription ?? "Unknown error")
             Task { @MainActor in
-                LogService.shared.log(
-                    "Custom CA validation failed: \(errorDescription). Checking if this is a cloud provider...",
-                    type: .info
-                )
-            }
-        }
-
-        return isValid
-    }
-
-    private func isCloudProvider(_ hostname: String) -> Bool {
-        let cloudProviderPatterns = [
-            // Google Cloud (GKE)
-            "\\.googleapis\\.com$",
-            "\\.gke\\.goog$",
-            "\\d+\\.\\d+\\.\\d+\\.\\d+",    // IP addresses (common for GKE)
-            // AWS (EKS)
-            "\\.eks\\.amazonaws\\.com$",
-            "\\.elb\\.amazonaws\\.com$",
-            // Azure (AKS)
-            "\\.azmk8s\\.io$",
-            "\\.azure\\.com$",
-            // DigitalOcean
-            "\\.k8s\\.ondigitalocean\\.com$",
-        ]
-
-        for pattern in cloudProviderPatterns {
-            if let regex = try? NSRegularExpression(pattern: pattern, options: .caseInsensitive),
-                regex.firstMatch(
-                    in: hostname, options: [],
-                    range: NSRange(location: 0, length: hostname.utf16.count)) != nil
-            {
-                return true
-            }
-        }
-        return false
-    }
-
-    private func validateForCloudProvider(_ trust: SecTrust, hostname: String) -> Bool {
-        // For cloud providers with non-standards-compliant certificates,
-        // use the most permissive validation possible while still maintaining some security
-
-        // First try with SSL policy but no hostname verification
-        let basicPolicy = SecPolicyCreateSSL(true, nil)
-        SecTrustSetPolicies(trust, [basicPolicy] as CFArray)
-
-        // Allow system root certificates
-        SecTrustSetAnchorCertificatesOnly(trust, false)
-
-        var error: CFError?
-        var isValid = SecTrustEvaluateWithError(trust, &error)
-
-        if !isValid {
-            Task { @MainActor in
-                LogService.shared.log(
-                    "Cloud provider SSL validation failed for \(hostname), trying basic certificate validation...",
-                    type: .info
-                )
-            }
-
-            // If SSL policy fails, try with just basic X.509 policy (most permissive)
-            let basicX509Policy = SecPolicyCreateBasicX509()
-            SecTrustSetPolicies(trust, [basicX509Policy] as CFArray)
-
-            error = nil
-            isValid = SecTrustEvaluateWithError(trust, &error)
-        }
-
-        if !isValid {
-            let errorDescription = error?.localizedDescription ?? "Unknown error"
-            Task { @MainActor in
-                LogService.shared.log(
-                    "Cloud provider certificate validation failed for \(hostname): \(errorDescription)",
-                    type: .error
-                )
-            }
-        } else {
-            Task { @MainActor in
-                LogService.shared.log(
-                    "Cloud provider certificate validation succeeded for \(hostname)",
-                    type: .info
-                )
+                LogService.shared.log("Server trust validation failed: \(errorDescription)", type: .error)
             }
         }
 
@@ -296,14 +87,13 @@ final class TLSDelegate: NSObject, URLSessionDelegate {
     private func handleClientCertificate(_ challenge: URLAuthenticationChallenge) -> (
         URLSession.AuthChallengeDisposition, URLCredential?
     ) {
+        // For minikube, an identity is provided.
         if let identity = clientIdentity {
-            let credential = URLCredential(
-                identity: identity, certificates: nil, persistence: .forSession)
+            let credential = URLCredential(identity: identity, certificates: nil, persistence: .forSession)
             return (.useCredential, credential)
         } else {
-            // The server is requesting a client certificate, but we don't have one.
-            // This is expected for token-based authentication.
-            // We explicitly continue without providing a credential by passing nil.
+            // For GKE, no identity is provided, so we continue with token auth.
+            // The server requests a cert, but it's optional.
             return (.useCredential, nil)
         }
     }
