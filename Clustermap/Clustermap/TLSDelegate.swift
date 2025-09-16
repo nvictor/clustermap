@@ -20,6 +20,19 @@ final class TLSDelegate: NSObject, URLSessionDelegate {
         self.insecure = insecure
     }
 
+    // Add delegate method to catch and log SSL errors at the URLSession level
+    func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?)
+    {
+        if let error = error {
+            Task { @MainActor in
+                LogService.shared.log(
+                    "URLSession task completed with error: \(error.localizedDescription)",
+                    type: .error
+                )
+            }
+        }
+    }
+
     func urlSession(
         _ session: URLSession,
         didReceive challenge: URLAuthenticationChallenge,
@@ -79,6 +92,12 @@ final class TLSDelegate: NSObject, URLSessionDelegate {
                 }
                 let isValidFallback = validateForCloudProvider(trust, hostname: hostname)
                 if isValidFallback {
+                    Task { @MainActor in
+                        LogService.shared.log(
+                            "Successfully created URLCredential for cloud provider \(hostname)",
+                            type: .info
+                        )
+                    }
                     return (.useCredential, URLCredential(trust: trust))
                 }
             }
