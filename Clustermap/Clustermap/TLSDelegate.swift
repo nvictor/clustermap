@@ -48,7 +48,8 @@ final class TLSDelegate: NSObject, URLSessionDelegate {
             return (.cancelAuthenticationChallenge, nil)
         }
 
-        let shouldAcceptTrust = insecure || validateWithCustomCA(trust)
+        let shouldAcceptTrust = insecure || validateWithCustomCA(
+            trust, host: challenge.protectionSpace.host)
 
         if shouldAcceptTrust {
             return (.useCredential, URLCredential(trust: trust))
@@ -59,12 +60,12 @@ final class TLSDelegate: NSObject, URLSessionDelegate {
         }
     }
 
-    private func validateWithCustomCA(_ trust: SecTrust) -> Bool {
+    private func validateWithCustomCA(_ trust: SecTrust, host: String) -> Bool {
         guard let ca = caCert else { return false }
 
         SecTrustSetAnchorCertificates(trust, [ca] as CFArray)
         SecTrustSetAnchorCertificatesOnly(trust, true)
-        SecTrustSetPolicies(trust, SecPolicyCreateSSL(true, nil))
+        SecTrustSetPolicies(trust, SecPolicyCreateSSL(true, host as CFString))
 
         var error: CFError?
         let isValid = SecTrustEvaluateWithError(trust, &error)
