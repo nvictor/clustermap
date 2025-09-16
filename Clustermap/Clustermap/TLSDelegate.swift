@@ -296,12 +296,15 @@ final class TLSDelegate: NSObject, URLSessionDelegate {
     private func handleClientCertificate(_ challenge: URLAuthenticationChallenge) -> (
         URLSession.AuthChallengeDisposition, URLCredential?
     ) {
-        guard let identity = clientIdentity else {
-            return (.performDefaultHandling, nil)
+        if let identity = clientIdentity {
+            let credential = URLCredential(
+                identity: identity, certificates: nil, persistence: .forSession)
+            return (.useCredential, credential)
+        } else {
+            // The server is requesting a client certificate, but we don't have one.
+            // This is expected for token-based authentication.
+            // We explicitly continue without providing a credential by passing nil.
+            return (.useCredential, nil)
         }
-
-        let credential = URLCredential(
-            identity: identity, certificates: nil, persistence: .forSession)
-        return (.useCredential, credential)
     }
 }
