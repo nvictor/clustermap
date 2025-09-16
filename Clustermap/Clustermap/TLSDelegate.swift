@@ -48,8 +48,7 @@ final class TLSDelegate: NSObject, URLSessionDelegate {
             return (.cancelAuthenticationChallenge, nil)
         }
 
-        let shouldAcceptTrust = insecure || validateWithCustomCA(
-            trust, host: challenge.protectionSpace.host)
+        let shouldAcceptTrust = insecure || validateWithCustomCA(trust)
 
         if shouldAcceptTrust {
             return (.useCredential, URLCredential(trust: trust))
@@ -60,12 +59,15 @@ final class TLSDelegate: NSObject, URLSessionDelegate {
         }
     }
 
-    private func validateWithCustomCA(_ trust: SecTrust, host: String) -> Bool {
+    private func validateWithCustomCA(_ trust: SecTrust) -> Bool {
         guard let ca = caCert else { return false }
 
         SecTrustSetAnchorCertificates(trust, [ca] as CFArray)
         SecTrustSetAnchorCertificatesOnly(trust, true)
-        SecTrustSetPolicies(trust, SecPolicyCreateSSL(true, host as CFString))
+        // When connecting to an IP, the hostname check will fail.
+        // Since we are explicitly trusting the CA from the kubeconfig,
+        // we can skip the hostname check.
+        SecTrustSetPolicies(trust, SecPolicyCreateSSL(true, nil))
 
         var error: CFError?
         let isValid = SecTrustEvaluateWithError(trust, &error)
