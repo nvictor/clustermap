@@ -195,6 +195,7 @@ final class ConfigLoader {
             "/opt/homebrew/bin/gke-gcloud-auth-plugin",
             "/usr/local/bin/gke-gcloud-auth-plugin",
             "\(FileManager.default.homeDirectoryForCurrentUser.path)/google-cloud-sdk/bin/gke-gcloud-auth-plugin",
+            "\(FileManager.default.homeDirectoryForCurrentUser.path)/Developer/google-cloud-sdk/bin/gke-gcloud-auth-plugin",
             "/usr/local/google-cloud-sdk/bin/gke-gcloud-auth-plugin",
             "/opt/google-cloud-sdk/bin/gke-gcloud-auth-plugin",
             "/usr/local/Caskroom/google-cloud-sdk/latest/google-cloud-sdk/bin/gke-gcloud-auth-plugin",
@@ -227,6 +228,7 @@ final class ConfigLoader {
         // Add common gcloud SDK installation paths for GKE authentication
         let gcloudPaths = [
             "\(FileManager.default.homeDirectoryForCurrentUser.path)/google-cloud-sdk/bin",
+            "\(FileManager.default.homeDirectoryForCurrentUser.path)/Developer/google-cloud-sdk/bin",
             "/usr/local/google-cloud-sdk/bin",
             "/opt/google-cloud-sdk/bin",
             "/usr/local/Caskroom/google-cloud-sdk/latest/google-cloud-sdk/bin",
