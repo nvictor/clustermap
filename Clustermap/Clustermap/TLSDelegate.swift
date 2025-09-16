@@ -31,7 +31,7 @@ final class TLSDelegate: NSObject, URLSessionDelegate {
                     type: .error
                 )
 
-                                // Log additional details for SSL errors
+                // Log additional details for SSL errors
                 if nsError.domain == NSURLErrorDomain {
                     let errorCode = nsError.code
                     let errorName: String
@@ -93,7 +93,9 @@ final class TLSDelegate: NSObject, URLSessionDelegate {
                     type: .info
                 )
             }
-            result = (URLSession.AuthChallengeDisposition.performDefaultHandling, nil as URLCredential?)
+            result = (
+                URLSession.AuthChallengeDisposition.performDefaultHandling, nil as URLCredential?
+            )
         }
 
         Task { @MainActor in
