@@ -49,7 +49,6 @@ jobs:
             ARCHS=arm64 ONLY_ACTIVE_ARCH=YES \
             DEBUG_INFORMATION_FORMAT="dwarf" \
             ENABLE_HARDENED_RUNTIME=YES \
-            CODE_SIGN_ENTITLEMENTS="Clustermap.entitlements" \
             CODE_SIGN_IDENTITY="Developer ID Application: Victor Noagbodji (2DZ6D8C78T)" \
             PROVISIONING_PROFILE_SPECIFIER="Clustermap" \
             archive
