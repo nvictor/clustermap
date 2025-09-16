@@ -59,18 +59,35 @@ final class TLSDelegate: NSObject, URLSessionDelegate {
             return (.useCredential, URLCredential(trust: trust))
         }
 
+        let hostname = challenge.protectionSpace.host
+
         // Try to validate with custom CA if available
         if caCert != nil {
             let isValid = validateWithCustomCA(trust)
             if isValid {
                 return (.useCredential, URLCredential(trust: trust))
-            } else {
-                return (.cancelAuthenticationChallenge, nil)
             }
+            
+            // If custom CA validation failed but this is a cloud provider,
+            // try more permissive validation as fallback
+            if isCloudProvider(hostname) {
+                Task { @MainActor in
+                    LogService.shared.log(
+                        "Custom CA validation failed, trying cloud provider fallback for \(hostname)",
+                        type: .info
+                    )
+                }
+                let isValidFallback = validateForCloudProvider(trust, hostname: hostname)
+                if isValidFallback {
+                    return (.useCredential, URLCredential(trust: trust))
+                }
+            }
+            
+            // Custom CA validation failed and no successful fallback
+            return (.cancelAuthenticationChallenge, nil)
         }
 
-        // For cloud providers (like GKE) without custom CA, try more permissive validation
-        let hostname = challenge.protectionSpace.host
+        // For cloud providers (like GKE) without custom CA, try permissive validation
         if isCloudProvider(hostname) {
             Task { @MainActor in
                 LogService.shared.log(
@@ -112,7 +129,9 @@ final class TLSDelegate: NSObject, URLSessionDelegate {
                 describing: error?.localizedDescription ?? "Unknown error")
             Task { @MainActor in
                 LogService.shared.log(
-                    "Server trust validation failed: \(errorDescription)", type: .error)
+                    "Custom CA validation failed: \(errorDescription). Checking if this is a cloud provider...", 
+                    type: .info
+                )
             }
         }
 
