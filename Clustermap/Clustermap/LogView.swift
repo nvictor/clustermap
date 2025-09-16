@@ -53,6 +53,12 @@ struct ConsoleHeaderView: View {
             .help("Copy Selected Logs")
             .disabled(selection.isEmpty)
 
+            Button(action: emailLogs) {
+                Image(systemName: "envelope")
+            }
+            .help("Email Logs to Developer")
+            .disabled(selection.isEmpty)
+
             Button(action: {
                 selection.removeAll()
                 logService.clearLogs()
@@ -69,6 +75,41 @@ struct ConsoleHeaderView: View {
             separator: "\n")
         NSPasteboard.general.clearContents()
         NSPasteboard.general.setString(logText, forType: .string)
+    }
+    
+    private func emailLogs() {
+        let entriesToEmail = logService.logEntries.filter { selection.contains($0.id) }
+        let logText = entriesToEmail.map { entry in
+            let timestamp = DateFormatter.emailFormatter.string(from: entry.timestamp)
+            return "[\(timestamp)] [\(entry.type.displayName)] \(entry.message)"
+        }.joined(separator: "\n")
+        
+        let emailBody = """
+        Hello,
+        
+        Please find the Clustermap application logs below:
+        
+        \(logText)
+        
+        Best regards,
+        Clustermap Application
+        """
+        
+        let subject = "Clustermap Logs - \(Date().formatted())"
+        let recipient = "noagbodjivictor@gmail.com"
+        
+        // Create mailto URL
+        var components = URLComponents()
+        components.scheme = "mailto"
+        components.path = recipient
+        components.queryItems = [
+            URLQueryItem(name: "subject", value: subject),
+            URLQueryItem(name: "body", value: emailBody)
+        ]
+        
+        if let url = components.url {
+            NSWorkspace.shared.open(url)
+        }
     }
 }
 
@@ -105,6 +146,25 @@ struct LogMessageView: View {
         case .info: return .primary
         case .success: return .green
         case .error: return .red
+        }
+    }
+}
+
+extension DateFormatter {
+    static let emailFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateStyle = .medium
+        formatter.timeStyle = .medium
+        return formatter
+    }()
+}
+
+extension LogType {
+    var displayName: String {
+        switch self {
+        case .info: return "INFO"
+        case .success: return "SUCCESS"
+        case .error: return "ERROR"
         }
     }
 }
