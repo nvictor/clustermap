@@ -50,6 +50,12 @@ final class TLSDelegate: NSObject, URLSessionDelegate {
 
         // If insecure mode is enabled, accept any certificate
         if insecure {
+            Task { @MainActor in
+                LogService.shared.log(
+                    "Insecure mode: Skipping all TLS validation for \(challenge.protectionSpace.host)",
+                    type: .info
+                )
+            }
             return (.useCredential, URLCredential(trust: trust))
         }
 
@@ -66,6 +72,12 @@ final class TLSDelegate: NSObject, URLSessionDelegate {
         // For cloud providers (like GKE) without custom CA, try more permissive validation
         let hostname = challenge.protectionSpace.host
         if isCloudProvider(hostname) {
+            Task { @MainActor in
+                LogService.shared.log(
+                    "Cloud provider detected (\(hostname)): Using permissive certificate validation",
+                    type: .info
+                )
+            }
             let isValid = validateForCloudProvider(trust, hostname: hostname)
             if isValid {
                 return (.useCredential, URLCredential(trust: trust))
@@ -84,6 +96,12 @@ final class TLSDelegate: NSObject, URLSessionDelegate {
         // When connecting to an IP, the hostname check will fail.
         // Since we are explicitly trusting the CA from the kubeconfig,
         // we can skip the hostname check.
+        Task { @MainActor in
+            LogService.shared.log(
+                "Custom CA validation: Skipping hostname validation (using kubeconfig CA)",
+                type: .info
+            )
+        }
         SecTrustSetPolicies(trust, SecPolicyCreateSSL(true, nil))
 
         var error: CFError?
