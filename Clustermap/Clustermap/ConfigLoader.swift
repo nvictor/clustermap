@@ -177,10 +177,39 @@ final class ConfigLoader {
             struct Status: Codable { let token: String }
             let status: Status
         }
+        
+        // For gke-gcloud-auth-plugin, verify it's available before execution
+        if exec.command == "gke-gcloud-auth-plugin" {
+            await LogService.shared.log("Attempting to authenticate with GKE using gke-gcloud-auth-plugin", type: .info)
+            try validateGKEAuthPlugin()
+        }
+        
         let env = exec.env?.reduce(into: [:]) { $0[$1.name] = $1.value } ?? [:]
         let tokenData = try await execute(command: exec.command, args: exec.args, extraEnv: env)
         let cred = try JSONDecoder().decode(ExecCredential.self, from: tokenData)
         return cred.status.token
+    }
+    
+    private static func validateGKEAuthPlugin() throws {
+        let possiblePaths = [
+            "/opt/homebrew/bin/gke-gcloud-auth-plugin",
+            "/usr/local/bin/gke-gcloud-auth-plugin",
+            "\(FileManager.default.homeDirectoryForCurrentUser.path)/google-cloud-sdk/bin/gke-gcloud-auth-plugin",
+            "/usr/local/google-cloud-sdk/bin/gke-gcloud-auth-plugin",
+            "/opt/google-cloud-sdk/bin/gke-gcloud-auth-plugin",
+            "/usr/local/Caskroom/google-cloud-sdk/latest/google-cloud-sdk/bin/gke-gcloud-auth-plugin",
+            "/opt/homebrew/Caskroom/google-cloud-sdk/latest/google-cloud-sdk/bin/gke-gcloud-auth-plugin"
+        ]
+        
+        // Check if the plugin exists in any of the common locations
+        for path in possiblePaths {
+            if FileManager.default.isExecutableFile(atPath: path) {
+                return // Found it, we're good
+            }
+        }
+        
+        // If not found in common locations, let the PATH resolution try to find it
+        // The enhanced PATH in execute() will handle this
     }
 
     private static func execute(command: String, args: [String]?, extraEnv: [String: String])
@@ -194,7 +223,18 @@ final class ConfigLoader {
         let defaultPaths = [
             "/opt/homebrew/bin", "/usr/local/bin", "/usr/bin", "/bin", "/usr/sbin", "/sbin",
         ]
-        env["PATH"] = (env["PATH"].map { "\($0):" } ?? "") + defaultPaths.joined(separator: ":")
+        
+        // Add common gcloud SDK installation paths for GKE authentication
+        let gcloudPaths = [
+            "\(FileManager.default.homeDirectoryForCurrentUser.path)/google-cloud-sdk/bin",
+            "/usr/local/google-cloud-sdk/bin",
+            "/opt/google-cloud-sdk/bin",
+            "/usr/local/Caskroom/google-cloud-sdk/latest/google-cloud-sdk/bin",
+            "/opt/homebrew/Caskroom/google-cloud-sdk/latest/google-cloud-sdk/bin"
+        ]
+        
+        let allPaths = defaultPaths + gcloudPaths
+        env["PATH"] = (env["PATH"].map { "\($0):" } ?? "") + allPaths.joined(separator: ":")
         extraEnv.forEach { env[$0] = $1 }
         process.environment = env
 
@@ -215,6 +255,23 @@ final class ConfigLoader {
             return outputData
         } else {
             let errorString = String(decoding: errorData, as: UTF8.self)
+            
+            // Provide helpful error message for missing gke-gcloud-auth-plugin
+            if command == "gke-gcloud-auth-plugin" && process.terminationStatus == 127 {
+                let enhancedError = """
+                \(errorString.trimmingCharacters(in: .whitespacesAndNewlines))
+                
+                The gke-gcloud-auth-plugin is required for GKE cluster authentication but was not found.
+                Please install the Google Cloud SDK and the gke-gcloud-auth-plugin:
+                
+                1. Install Google Cloud SDK: https://cloud.google.com/sdk/docs/install
+                2. Install the plugin: gcloud components install gke-gcloud-auth-plugin
+                3. Ensure the plugin is in your PATH or restart the application
+                """
+                throw ConfigLoaderError.execCommandFailed(
+                    command: command, exitCode: process.terminationStatus, stderr: enhancedError)
+            }
+            
             throw ConfigLoaderError.execCommandFailed(
                 command: command, exitCode: process.terminationStatus, stderr: errorString)
         }
