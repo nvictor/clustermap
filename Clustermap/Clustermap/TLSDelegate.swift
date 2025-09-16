@@ -67,7 +67,7 @@ final class TLSDelegate: NSObject, URLSessionDelegate {
             if isValid {
                 return (.useCredential, URLCredential(trust: trust))
             }
-            
+
             // If custom CA validation failed but this is a cloud provider,
             // try more permissive validation as fallback
             if isCloudProvider(hostname) {
@@ -82,7 +82,7 @@ final class TLSDelegate: NSObject, URLSessionDelegate {
                     return (.useCredential, URLCredential(trust: trust))
                 }
             }
-            
+
             // Custom CA validation failed and no successful fallback
             return (.cancelAuthenticationChallenge, nil)
         }
@@ -129,7 +129,7 @@ final class TLSDelegate: NSObject, URLSessionDelegate {
                 describing: error?.localizedDescription ?? "Unknown error")
             Task { @MainActor in
                 LogService.shared.log(
-                    "Custom CA validation failed: \(errorDescription). Checking if this is a cloud provider...", 
+                    "Custom CA validation failed: \(errorDescription). Checking if this is a cloud provider...",
                     type: .info
                 )
             }
@@ -169,11 +169,11 @@ final class TLSDelegate: NSObject, URLSessionDelegate {
     private func validateForCloudProvider(_ trust: SecTrust, hostname: String) -> Bool {
         // For cloud providers with non-standards-compliant certificates,
         // use the most permissive validation possible while still maintaining some security
-        
+
         // First try with SSL policy but no hostname verification
         let basicPolicy = SecPolicyCreateSSL(true, nil)
         SecTrustSetPolicies(trust, [basicPolicy] as CFArray)
-        
+
         // Allow system root certificates
         SecTrustSetAnchorCertificatesOnly(trust, false)
 
@@ -187,11 +187,11 @@ final class TLSDelegate: NSObject, URLSessionDelegate {
                     type: .info
                 )
             }
-            
+
             // If SSL policy fails, try with just basic X.509 policy (most permissive)
             let basicX509Policy = SecPolicyCreateBasicX509()
             SecTrustSetPolicies(trust, [basicX509Policy] as CFArray)
-            
+
             error = nil
             isValid = SecTrustEvaluateWithError(trust, &error)
         }
