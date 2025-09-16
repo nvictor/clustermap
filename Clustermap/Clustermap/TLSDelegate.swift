@@ -167,16 +167,34 @@ final class TLSDelegate: NSObject, URLSessionDelegate {
     }
 
     private func validateForCloudProvider(_ trust: SecTrust, hostname: String) -> Bool {
-        // For cloud providers, use a more permissive SSL policy that doesn't require
-        // strict certificate chain validation but still validates the certificate signature
-        let policy = SecPolicyCreateSSL(true, hostname as CFString)
-        SecTrustSetPolicies(trust, [policy] as CFArray)
-
+        // For cloud providers with non-standards-compliant certificates,
+        // use the most permissive validation possible while still maintaining some security
+        
+        // First try with SSL policy but no hostname verification
+        let basicPolicy = SecPolicyCreateSSL(true, nil)
+        SecTrustSetPolicies(trust, [basicPolicy] as CFArray)
+        
         // Allow system root certificates
         SecTrustSetAnchorCertificatesOnly(trust, false)
 
         var error: CFError?
-        let isValid = SecTrustEvaluateWithError(trust, &error)
+        var isValid = SecTrustEvaluateWithError(trust, &error)
+
+        if !isValid {
+            Task { @MainActor in
+                LogService.shared.log(
+                    "Cloud provider SSL validation failed for \(hostname), trying basic certificate validation...",
+                    type: .info
+                )
+            }
+            
+            // If SSL policy fails, try with just basic X.509 policy (most permissive)
+            let basicX509Policy = SecPolicyCreateBasicX509()
+            SecTrustSetPolicies(trust, [basicX509Policy] as CFArray)
+            
+            error = nil
+            isValid = SecTrustEvaluateWithError(trust, &error)
+        }
 
         if !isValid {
             let errorDescription = error?.localizedDescription ?? "Unknown error"
