@@ -14,6 +14,10 @@
 				<true/>
 			</dict>
 		</dict>
+		<!-- Allow connections to Kubernetes clusters with IP-based certificates -->
+		<!-- This is necessary for GKE, EKS, AKS and other cloud providers -->
+		<key>NSAllowsArbitraryLoads</key>
+		<true/>
 	</dict>
 </dict>
 </plist>
