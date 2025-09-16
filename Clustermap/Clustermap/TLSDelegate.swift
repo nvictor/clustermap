@@ -31,33 +31,34 @@ final class TLSDelegate: NSObject, URLSessionDelegate {
                     type: .error
                 )
 
-                // Log additional details for SSL errors
+                                // Log additional details for SSL errors
                 if nsError.domain == NSURLErrorDomain {
                     let errorCode = nsError.code
-                    let errorName =
-                        switch errorCode {
-                        case NSURLErrorSecureConnectionFailed: "NSURLErrorSecureConnectionFailed"
-                        case NSURLErrorServerCertificateHasBadDate:
-                            "NSURLErrorServerCertificateHasBadDate"
-                        case NSURLErrorServerCertificateUntrusted:
-                            "NSURLErrorServerCertificateUntrusted"
-                        case NSURLErrorServerCertificateHasUnknownRoot:
-                            "NSURLErrorServerCertificateHasUnknownRoot"
-                        case NSURLErrorServerCertificateNotYetValid:
-                            "NSURLErrorServerCertificateNotYetValid"
-                        case NSURLErrorClientCertificateRejected:
-                            "NSURLErrorClientCertificateRejected"
-                        case NSURLErrorClientCertificateRequired:
-                            "NSURLErrorClientCertificateRequired"
-                        default: "Unknown SSL error (\(errorCode))"
-                        }
+                    let errorName: String
+                    switch errorCode {
+                    case NSURLErrorSecureConnectionFailed:
+                        errorName = "NSURLErrorSecureConnectionFailed"
+                    case NSURLErrorServerCertificateHasBadDate:
+                        errorName = "NSURLErrorServerCertificateHasBadDate"
+                    case NSURLErrorServerCertificateUntrusted:
+                        errorName = "NSURLErrorServerCertificateUntrusted"
+                    case NSURLErrorServerCertificateHasUnknownRoot:
+                        errorName = "NSURLErrorServerCertificateHasUnknownRoot"
+                    case NSURLErrorServerCertificateNotYetValid:
+                        errorName = "NSURLErrorServerCertificateNotYetValid"
+                    case NSURLErrorClientCertificateRejected:
+                        errorName = "NSURLErrorClientCertificateRejected"
+                    case NSURLErrorClientCertificateRequired:
+                        errorName = "NSURLErrorClientCertificateRequired"
+                    default:
+                        errorName = "Unknown SSL error (\(errorCode))"
+                    }
                     LogService.shared.log("SSL Error type: \(errorName)", type: .error)
                 }
 
-                if let userInfo = nsError.userInfo as? [String: Any] {
-                    for (key, value) in userInfo {
-                        LogService.shared.log("Error userInfo[\(key)]: \(value)", type: .info)
-                    }
+                let userInfo = nsError.userInfo
+                for (key, value) in userInfo {
+                    LogService.shared.log("Error userInfo[\(key)]: \(value)", type: .info)
                 }
             }
         }
@@ -75,21 +76,25 @@ final class TLSDelegate: NSObject, URLSessionDelegate {
             )
         }
 
-        let result =
-            switch challenge.protectionSpace.authenticationMethod {
-            case NSURLAuthenticationMethodServerTrust:
-                handleServerTrust(challenge)
-            case NSURLAuthenticationMethodClientCertificate:
-                handleClientCertificate(challenge)
-            default:
-                Task { @MainActor in
-                    LogService.shared.log(
-                        "Unhandled authentication method: \(challenge.protectionSpace.authenticationMethod)",
-                        type: .info
-                    )
-                }
-                (URLSession.AuthChallengeDisposition.performDefaultHandling, nil as URLCredential?)
+        let result: (URLSession.AuthChallengeDisposition, URLCredential?)
+        switch challenge.protectionSpace.authenticationMethod {
+        case NSURLAuthenticationMethodServerTrust:
+            result = handleServerTrust(challenge)
+        case NSURLAuthenticationMethodClientCertificate:
+            result = handleClientCertificate(challenge)
+        default:
+            Task { @MainActor in
+                LogService.shared.log(
+                    "Unhandled authentication method: \(challenge.protectionSpace.authenticationMethod)",
+                    type: .info
+                )
+                LogService.shared.log(
+                    "Using default handling for unhandled host: \(challenge.protectionSpace.host)",
+                    type: .info
+                )
             }
+            result = (URLSession.AuthChallengeDisposition.performDefaultHandling, nil as URLCredential?)
+        }
 
         Task { @MainActor in
             LogService.shared.log(
