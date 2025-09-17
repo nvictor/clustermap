@@ -66,7 +66,7 @@ struct TreemapView: View {
     }
 
     private func labelView(geometry: GeometryProxy) -> some View {
-        Text(node.name)
+        Text(labelText)
             .font(.caption)
             .fontWeight(.medium)
             .multilineTextAlignment(.center)
@@ -84,6 +84,15 @@ struct TreemapView: View {
             .frame(width: child.frame.width, height: child.frame.height)
             .position(x: child.frame.midX, y: child.frame.midY)
         }
+    }
+
+    private var labelText: String {
+        // path.count == 1 is the root "Cluster" node.
+        // path.count == 2 is a namespace node.
+        if path.count == 2 && !node.isLeaf {
+            return "\(node.name) (\(node.children.count))"
+        }
+        return node.name
     }
 
     private var nodeColor: Color {
