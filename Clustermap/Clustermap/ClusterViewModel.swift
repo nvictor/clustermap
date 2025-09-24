@@ -10,7 +10,7 @@ import SwiftUI
 
 @MainActor
 final class ClusterViewModel: ObservableObject {
-    @Published var metric: SizingMetric = .count { didSet { reload() } }
+    var metric: SizingMetric = .count { didSet { reload() } }
     @Published var root: TreeNode = TreeNode(name: "Welcome", value: 1, children: [])
     @Published var maxLeafValue: Double = 1.0
     @Published var logEntries: [LogEntry] = []

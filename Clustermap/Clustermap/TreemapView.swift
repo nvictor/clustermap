@@ -23,13 +23,15 @@ struct TreemapView: View {
 
     var body: some View {
         GeometryReader { geometry in
-            ZStack(alignment: node.isLeaf ? .center : .topLeading) {
-                backgroundView
-                if node.isLeaf {
-                    leafView
-                } else {
-                    labelView(geometry: geometry)
-                    childrenView(geometry: geometry)
+            if geometry.size.width > 0 && geometry.size.height > 0 {
+                ZStack(alignment: node.isLeaf ? .center : .topLeading) {
+                    backgroundView
+                    if node.isLeaf {
+                        leafView
+                    } else {
+                        labelView(geometry: geometry)
+                        childrenView(geometry: geometry)
+                    }
                 }
             }
         }
