@@ -37,8 +37,12 @@ enum SizingMetric: String, CaseIterable, Identifiable {
 
 extension Color {
     static func from(string: String) -> Color {
-        let hash = string.unicodeScalars.reduce(0) { $0 ^ $1.value }
-        let hue = Double(hash % 256) / 256.0
+        var hash: Int = 0
+        for char in string.unicodeScalars {
+            hash = 31 &* hash &+ Int(char.value)
+        }
+        // Using the golden ratio to pick well-distributed colors.
+        let hue = fmod(abs(Double(hash)) * 0.618033988749895, 1.0)
         return Color(
             hue: hue,
             saturation: ColorConstants.saturation,

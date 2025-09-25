@@ -67,11 +67,17 @@ struct TreeBuilder {
 
     private static func createTreeNode(name: String, children: [TreeNode]) -> TreeNode {
         let totalValue = children.reduce(0) { $0 + $1.value }
-        return TreeNode(name: name, value: totalValue, children: children)
+        let maxChildValue = children.reduce(0) { max($0, $1.maxSubtreeLeafValue) }
+        return TreeNode(
+            name: name,
+            value: totalValue,
+            children: children,
+            maxSubtreeLeafValue: maxChildValue
+        )
     }
 
     private static func createLeafNode(name: String, value: Double) -> TreeNode {
-        TreeNode(name: name, value: value, children: [])
+        TreeNode(name: name, value: value, children: [], maxSubtreeLeafValue: value)
     }
 
     private static func findOwnedPods(for deployment: KubeDeployment, in pods: [KubePod])

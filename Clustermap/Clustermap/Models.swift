@@ -12,6 +12,7 @@ struct TreeNode: Identifiable, Hashable {
     let name: String
     let value: Double
     let children: [TreeNode]
+    let maxSubtreeLeafValue: Double
     var isLeaf: Bool { children.isEmpty }
 }
 
