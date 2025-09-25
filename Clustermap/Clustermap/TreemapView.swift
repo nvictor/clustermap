@@ -51,24 +51,18 @@ struct TreemapView: View {
     }
 
     private var leafView: some View {
-        VStack {
-            Text(node.name)
-                .font(.caption)
-                .fontWeight(.medium)
-                .lineLimit(2)
-                .multilineTextAlignment(.center)
-            Text(formatValue(node.value))
-                .font(.caption2)
-                .opacity(0.8)
-        }
-        .foregroundColor(readableTextColor)
-        .padding(4)
-        .contentShape(Rectangle())
-        .help("\(node.name)\nValue: \(node.value)")
+        Text((viewModel.metric != .count) ? "\(node.name) (\(formatValue(node.value))" : "\(node.name)")
+            .font(.caption)
+            .fontWeight(.medium)
+            .lineLimit(2)
+            .multilineTextAlignment(.center)
+            .foregroundColor(readableTextColor)
+            .padding(4)
+            .contentShape(Rectangle())
     }
 
     private func labelView(geometry: GeometryProxy) -> some View {
-        Text(labelText)
+        parentLabel
             .font(.caption)
             .fontWeight(.medium)
             .multilineTextAlignment(.center)
@@ -88,13 +82,13 @@ struct TreemapView: View {
         }
     }
 
-    private var labelText: String {
-        // path.count == 1 is the root "Cluster" node.
-        // path.count == 2 is a namespace node.
-        if path.count == 2 && !node.isLeaf {
-            return "\(node.name) (\(node.children.count))"
+    @ViewBuilder
+    private var parentLabel: some View {
+        if viewModel.metric == .count {
+            Text("\(node.name) (\(node.leafNodeCount))")
+        } else {
+            Text("\(node.name) (\(formatValue(node.value)))")
         }
-        return node.name
     }
 
     private var nodeColor: Color {

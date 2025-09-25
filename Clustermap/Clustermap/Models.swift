@@ -13,6 +13,7 @@ struct TreeNode: Identifiable, Hashable {
     let value: Double
     let children: [TreeNode]
     let maxSubtreeLeafValue: Double
+    let leafNodeCount: Int
     var isLeaf: Bool { children.isEmpty }
 }
 

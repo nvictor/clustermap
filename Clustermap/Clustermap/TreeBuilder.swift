@@ -68,16 +68,18 @@ struct TreeBuilder {
     private static func createTreeNode(name: String, children: [TreeNode]) -> TreeNode {
         let totalValue = children.reduce(0) { $0 + $1.value }
         let maxChildValue = children.reduce(0) { max($0, $1.maxSubtreeLeafValue) }
+        let totalLeafNodes = children.reduce(0) { $0 + $1.leafNodeCount }
         return TreeNode(
             name: name,
             value: totalValue,
             children: children,
-            maxSubtreeLeafValue: maxChildValue
+            maxSubtreeLeafValue: maxChildValue,
+            leafNodeCount: totalLeafNodes
         )
     }
 
     private static func createLeafNode(name: String, value: Double) -> TreeNode {
-        TreeNode(name: name, value: value, children: [], maxSubtreeLeafValue: value)
+        TreeNode(name: name, value: value, children: [], maxSubtreeLeafValue: value, leafNodeCount: 1)
     }
 
     private static func findOwnedPods(for deployment: KubeDeployment, in pods: [KubePod])
