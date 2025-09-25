@@ -6,8 +6,8 @@ A native macOS application that visualizes Kubernetes cluster resources using in
 
 ## Features
 
-- **Interactive Treemap Visualization**: Navigate cluster resources with zoomable, hierarchical treemaps
-- **Multiple Sizing Metrics**: View resources by count, CPU usage, or memory consumption  
+- **Interactive Treemap Visualization**: Navigate cluster resources with zoomable, hierarchical treemaps. The color of any node consistently reflects the "hottest" resource within its hierarchy.
+- **Multiple Sizing Metrics**: View resources by count, CPU usage, or memory consumption. Labels dynamically update to show relevant totals or deep counts.
 - **Real-time Resource Monitoring**: Connect to live clusters and fetch current resource metrics
 - **Native macOS Experience**: Built with SwiftUI for optimal performance and system integration
 - **Kubeconfig Support**: Works with standard Kubernetes configuration files

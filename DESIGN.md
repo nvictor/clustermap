@@ -51,6 +51,8 @@ struct TreeNode: Identifiable, Hashable {
     let name: String
     let value: Double
     let children: [TreeNode]
+    let maxSubtreeLeafValue: Double
+    let leafNodeCount: Int
     var isLeaf: Bool { children.isEmpty }
 }
 ```
@@ -59,7 +61,9 @@ struct TreeNode: Identifiable, Hashable {
 - Recursive structure naturally represents hierarchical data
 - `Identifiable` enables efficient SwiftUI updates
 - `Hashable` enables set operations and caching
-- `value` represents the sizing metric (count, CPU, memory)
+- `value` represents the aggregate sizing metric (count, CPU, memory) for a node and its direct children.
+- `maxSubtreeLeafValue` stores the maximum value of any leaf in the subtree, enabling consistent color-coding across the hierarchy.
+- `leafNodeCount` stores the total count of leaf nodes in the subtree, used for informative labeling in "Count" mode.
 
 #### Kubernetes Resource Models
 Direct mappings to Kubernetes API objects:
@@ -162,9 +166,15 @@ Cluster Root
 
 **Metric Calculations**:
 
-- **Count**: Number of pods/containers
-- **CPU**: Millicores from requests/usage  
-- **Memory**: Bytes from requests/usage
+During tree construction, several values are calculated for each node:
+- **`value`**: The aggregate value of the node's children, based on the selected metric.
+- **`maxSubtreeLeafValue`**: The maximum value of any leaf node in the subtree, used for consistent color grading.
+- **`leafNodeCount`**: A recursive count of all leaf nodes in the subtree, used for labeling in "Count" mode.
+
+The metrics themselves are derived from:
+- **Count**: A value of 1 for each pod.
+- **CPU**: Millicores from usage metrics.  
+- **Memory**: Bytes from usage metrics.
 
 **Design Decisions**:
 - Build complete tree structure upfront for UI performance
@@ -181,9 +191,10 @@ The core visualization component implementing recursive treemap rendering:
 
 **Key Features**:
 - Recursive SwiftUI views for each tree level
-- Color coding based on node names (deterministic hashing)
-- Hover effects and click handling
-- Responsive layout with minimum size constraints
+- Consistent color coding from parent to child, where every node's color reflects the "hottest" leaf node in its hierarchy.
+- Dynamic, metric-aware labels that show recursive counts or aggregate resource values.
+- Hover effects and click handling for interactive exploration.
+- Responsive layout with minimum size constraints.
 
 **Layout Constants** (`Constants.swift`):
 ```swift
