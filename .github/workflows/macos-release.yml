@@ -6,14 +6,15 @@ on:
       - "v*"
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build:
     # Re-enable when macos-26 is no longer in preview
     # See: https://github.com/actions/runner-images
     # runs-on: macos-latest
     runs-on: macos-26
-    permissions:
-      contents: write
 
     steps:
       - name: Checkout repository
