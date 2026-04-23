@@ -47,15 +47,18 @@ jobs:
       - name: Build and Archive App
         run: |
           set -o pipefail
+          test -n "${{ secrets.SPARKLE_PUBLIC_ED_KEY }}"
           xcodebuild -project "Clustermap/Clustermap.xcodeproj" \
             -scheme "Clustermap" \
             -configuration Release \
             -archivePath "$PWD/build/Clustermap.xcarchive" \
+            -derivedDataPath "$PWD/build/DerivedData" \
             -destination "platform=macOS,arch=arm64" \
             ARCHS=arm64 ONLY_ACTIVE_ARCH=YES \
             DEBUG_INFORMATION_FORMAT="dwarf" \
             ENABLE_HARDENED_RUNTIME=YES \
             CODE_SIGN_IDENTITY="Developer ID Application: Victor Noagbodji (2DZ6D8C78T)" \
+            SPARKLE_PUBLIC_ED_KEY="${{ secrets.SPARKLE_PUBLIC_ED_KEY }}" \
             PROVISIONING_PROFILE_SPECIFIER="Clustermap" \
             archive
 
@@ -82,9 +85,26 @@ jobs:
             -srcfolder "build/Clustermap.app" \
             -ov -format UDZO "build/Clustermap.dmg"
 
-      - name: Upload DMG to Release
+      - name: Generate Sparkle appcast
+        env:
+          SPARKLE_PRIVATE_KEY: ${{ secrets.SPARKLE_PRIVATE_KEY }}
+        run: |
+          test -n "$SPARKLE_PRIVATE_KEY"
+          mkdir -p build/sparkle-updates
+          cp "build/Clustermap.dmg" "build/sparkle-updates/Clustermap.dmg"
+          printf '%s' "$SPARKLE_PRIVATE_KEY" > build/sparkle_ed25519.key
+          chmod 600 build/sparkle_ed25519.key
+          build/DerivedData/SourcePackages/artifacts/sparkle/Sparkle/bin/generate_appcast \
+            --ed-key-file build/sparkle_ed25519.key \
+            --download-url-prefix "https://github.com/nvictor/clustermap/releases/download/${GITHUB_REF_NAME}/" \
+            build/sparkle-updates
+
+      - name: Upload DMG and Sparkle appcast to Release
         uses: softprops/action-gh-release@v2
         with:
-          files: build/Clustermap.dmg
+          files: |
+            build/Clustermap.dmg
+            build/sparkle-updates/appcast.xml
+            build/sparkle-updates/*.delta
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

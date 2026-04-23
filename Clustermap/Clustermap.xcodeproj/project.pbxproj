@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		5A506500000000000000001 /* Sparkle in Frameworks */ = {isa = PBXBuildFile; productRef = 5A506500000000000000002 /* Sparkle */; };
 		578657562E51466B0085E37F /* Yams in Frameworks */ = {isa = PBXBuildFile; productRef = 578657552E51466B0085E37F /* Yams */; };
 /* End PBXBuildFile section */
 
@@ -40,6 +41,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				5A506500000000000000001 /* Sparkle in Frameworks */,
 				578657562E51466B0085E37F /* Yams in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -75,6 +77,7 @@
 			);
 			name = Clustermap;
 			packageProductDependencies = (
+				5A506500000000000000002 /* Sparkle */,
 				578657552E51466B0085E37F /* Yams */,
 			);
 			productName = Clustermap;
@@ -106,6 +109,7 @@
 			mainGroup = 578657252E5142820085E37F;
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
+				5A506500000000000000003 /* XCRemoteSwiftPackageReference "Sparkle" */,
 				578657542E51466A0085E37F /* XCRemoteSwiftPackageReference "Yams" */,
 			);
 			preferredProjectObjectVersion = 77;
@@ -349,6 +353,14 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
+		5A506500000000000000003 /* XCRemoteSwiftPackageReference "Sparkle" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/sparkle-project/Sparkle";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.9.1;
+			};
+		};
 		578657542E51466A0085E37F /* XCRemoteSwiftPackageReference "Yams" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/jpsim/Yams";
@@ -360,6 +372,11 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
+		5A506500000000000000002 /* Sparkle */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 5A506500000000000000003 /* XCRemoteSwiftPackageReference "Sparkle" */;
+			productName = Sparkle;
+		};
 		578657552E51466B0085E37F /* Yams */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = 578657542E51466A0085E37F /* XCRemoteSwiftPackageReference "Yams" */;
