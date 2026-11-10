@@ -1,33 +1,34 @@
 import Combine
 import Sparkle
-import SwiftUI
 
 @MainActor
 final class AppUpdater: ObservableObject {
-    private let updaterController = SPUStandardUpdaterController(
-        startingUpdater: true,
-        updaterDelegate: nil,
-        userDriverDelegate: nil
-    )
+    /// Local builds have no public key, so the updater stays idle until a release build injects one.
+    let isConfigured = !(Bundle.main.object(forInfoDictionaryKey: "SUPublicEDKey") as? String ?? "").isEmpty
 
-    var canCheckForUpdates: Bool {
-        updaterController.updater.canCheckForUpdates
+    private let controller: SPUStandardUpdaterController
+    private var observation: AnyCancellable?
+
+    @Published var canCheckForUpdates = false
+
+    @Published var automaticallyChecksForUpdates: Bool {
+        didSet {
+            if automaticallyChecksForUpdates != controller.updater.automaticallyChecksForUpdates {
+                controller.updater.automaticallyChecksForUpdates = automaticallyChecksForUpdates
+            }
+        }
+    }
+
+    init() {
+        controller = SPUStandardUpdaterController(startingUpdater: isConfigured, updaterDelegate: nil, userDriverDelegate: nil)
+        automaticallyChecksForUpdates = controller.updater.automaticallyChecksForUpdates
+        // Sparkle disables checking while a check is already running.
+        observation = controller.updater.publisher(for: \.canCheckForUpdates)
+            .receive(on: RunLoop.main)
+            .sink { [weak self] in self?.canCheckForUpdates = $0 && self?.isConfigured == true }
     }
 
     func checkForUpdates() {
-        updaterController.checkForUpdates(nil)
-    }
-}
-
-struct CheckForUpdatesCommands: Commands {
-    let updater: AppUpdater
-
-    var body: some Commands {
-        CommandGroup(after: .appInfo) {
-            Button("Check for Updates...") {
-                updater.checkForUpdates()
-            }
-            .disabled(!updater.canCheckForUpdates)
-        }
+        controller.checkForUpdates(nil)
     }
 }

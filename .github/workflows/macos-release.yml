@@ -5,26 +5,54 @@ on:
     tags:
       - "v*"
   workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing version tag (v1.0.0)
+        required: true
+        type: string
+
+concurrency:
+  group: clustermap-release
+  cancel-in-progress: false
 
 permissions:
   contents: write
 
 jobs:
   build:
-    # Re-enable when macos-26 is no longer in preview
-    # See: https://github.com/actions/runner-images
-    # runs-on: macos-latest
     runs-on: macos-26
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v5
+        with:
+          ref: ${{ inputs.tag || github.ref }}
+          fetch-depth: 0
+
+      - name: Validate release tag
+        env:
+          RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
+        run: |
+          [[ "$RELEASE_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || exit 1
+          git rev-parse --verify "refs/tags/$RELEASE_TAG"
+          test "$(git rev-parse HEAD)" = "$(git rev-list -n 1 "$RELEASE_TAG")"
+          echo "RELEASE_TAG=$RELEASE_TAG" >> "$GITHUB_ENV"
+          echo "MARKETING_VERSION=${RELEASE_TAG#v}" >> "$GITHUB_ENV"
+          # Builds up to 0.1.22 used hand-set numbers (last: 122). The offset keeps every new
+          # build above them, so Sparkle offers the update to existing installs.
+          echo "BUILD_NUMBER=$((GITHUB_RUN_NUMBER + 1000)).$GITHUB_RUN_ATTEMPT" >> "$GITHUB_ENV"
 
       - name: Set up Xcode
         run: sudo xcode-select -s /Applications/Xcode.app
 
       - name: Create build directory
         run: mkdir -p build
+
+      - name: Validate and test
+        run: |
+          swift test --package-path ClustermapCore -c release
+          xcodebuild -project Clustermap/Clustermap.xcodeproj -scheme Clustermap -configuration Release \
+            -destination 'platform=macOS,arch=arm64' -derivedDataPath build/Validation CODE_SIGNING_ALLOWED=NO build
 
       - name: Import Developer ID Certificate
         run: |
@@ -57,16 +85,18 @@ jobs:
             ARCHS=arm64 ONLY_ACTIVE_ARCH=YES \
             DEBUG_INFORMATION_FORMAT="dwarf" \
             ENABLE_HARDENED_RUNTIME=YES \
+            CODE_SIGN_STYLE=Manual \
+            DEVELOPMENT_TEAM="${{ secrets.APPLE_TEAM_ID }}" \
             CODE_SIGN_IDENTITY="Developer ID Application: Victor Noagbodji (2DZ6D8C78T)" \
             SPARKLE_PUBLIC_ED_KEY="${{ secrets.SPARKLE_PUBLIC_ED_KEY }}" \
-            PROVISIONING_PROFILE_SPECIFIER="Clustermap" \
+            MARKETING_VERSION="$MARKETING_VERSION" CURRENT_PROJECT_VERSION="$BUILD_NUMBER" \
             archive
 
       - name: Export App
         run: |
           xcodebuild -exportArchive \
             -archivePath "$PWD/build/Clustermap.xcarchive" \
-            -exportOptionsPlist "$PWD/Clustermap/Clustermap/ExportOptions.plist" \
+            -exportOptionsPlist "$PWD/Clustermap/Configuration/ExportOptions.plist" \
             -exportPath "$PWD/build"
 
       - name: Notarize app
@@ -96,15 +126,23 @@ jobs:
           chmod 600 build/sparkle_ed25519.key
           build/DerivedData/SourcePackages/artifacts/sparkle/Sparkle/bin/generate_appcast \
             --ed-key-file build/sparkle_ed25519.key \
-            --download-url-prefix "https://github.com/nvictor/clustermap/releases/download/${GITHUB_REF_NAME}/" \
+            --download-url-prefix "https://github.com/nvictor/clustermap/releases/download/${RELEASE_TAG}/" \
             build/sparkle-updates
 
       - name: Upload DMG and Sparkle appcast to Release
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ env.RELEASE_TAG }}
           files: |
             build/Clustermap.dmg
             build/sparkle-updates/appcast.xml
             build/sparkle-updates/*.delta
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Remove signing material
+        if: always()
+        run: |
+          security delete-keychain build.keychain || true
+          rm -f build/DeveloperID.p12 build/sparkle_ed25519.key
+          rm -f "$HOME/Library/MobileDevice/Provisioning Profiles/Clustermap.provisionprofile"

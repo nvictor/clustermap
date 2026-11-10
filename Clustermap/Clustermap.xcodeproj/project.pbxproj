@@ -8,29 +8,16 @@
 
 /* Begin PBXBuildFile section */
 		5A506500000000000000001 /* Sparkle in Frameworks */ = {isa = PBXBuildFile; productRef = 5A506500000000000000002 /* Sparkle */; };
-		578657562E51466B0085E37F /* Yams in Frameworks */ = {isa = PBXBuildFile; productRef = 578657552E51466B0085E37F /* Yams */; };
+		578657562E51466B0085E37F /* ClustermapCore in Frameworks */ = {isa = PBXBuildFile; productRef = 578657552E51466B0085E37F /* ClustermapCore */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
 		57D4F7F02E73138100390B63 /* Clustermap.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Clustermap.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
-/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		579611132E52330E00759E0E /* Exceptions for "Clustermap" folder in "Clustermap" target */ = {
-			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
-			membershipExceptions = (
-				Info.plist,
-			);
-			target = 5786572D2E5142820085E37F /* Clustermap */;
-		};
-/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
-
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		578657302E5142820085E37F /* Clustermap */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-				579611132E52330E00759E0E /* Exceptions for "Clustermap" folder in "Clustermap" target */,
-			);
 			path = Clustermap;
 			sourceTree = "<group>";
 		};
@@ -42,7 +29,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				5A506500000000000000001 /* Sparkle in Frameworks */,
-				578657562E51466B0085E37F /* Yams in Frameworks */,
+				578657562E51466B0085E37F /* ClustermapCore in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -78,7 +65,7 @@
 			name = Clustermap;
 			packageProductDependencies = (
 				5A506500000000000000002 /* Sparkle */,
-				578657552E51466B0085E37F /* Yams */,
+				578657552E51466B0085E37F /* ClustermapCore */,
 			);
 			productName = Clustermap;
 			productReference = 57D4F7F02E73138100390B63 /* Clustermap.app */;
@@ -110,7 +97,7 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				5A506500000000000000003 /* XCRemoteSwiftPackageReference "Sparkle" */,
-				578657542E51466A0085E37F /* XCRemoteSwiftPackageReference "Yams" */,
+				578657542E51466A0085E37F /* XCLocalSwiftPackageReference "../ClustermapCore" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 578657252E5142820085E37F;
@@ -267,7 +254,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
-				CODE_SIGN_ENTITLEMENTS = Clustermap/Clustermap.entitlements;
+				CODE_SIGN_ENTITLEMENTS = Configuration/Clustermap.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Developer ID Application";
 				CODE_SIGN_STYLE = Manual;
@@ -277,14 +264,14 @@
 				"DEVELOPMENT_TEAM[sdk=macosx*]" = 2DZ6D8C78T;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = Clustermap/Info.plist;
+				INFOPLIST_FILE = Configuration/Info.plist;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.developer-tools";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 0.1.22;
+				MARKETING_VERSION = 0.2.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.mellowfleet.Clustermap;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
@@ -301,7 +288,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
-				CODE_SIGN_ENTITLEMENTS = Clustermap/Clustermap.entitlements;
+				CODE_SIGN_ENTITLEMENTS = Configuration/Clustermap.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Developer ID Application";
 				CODE_SIGN_STYLE = Manual;
@@ -311,14 +298,14 @@
 				"DEVELOPMENT_TEAM[sdk=macosx*]" = 2DZ6D8C78T;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = Clustermap/Info.plist;
+				INFOPLIST_FILE = Configuration/Info.plist;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.developer-tools";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 0.1.22;
+				MARKETING_VERSION = 0.2.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.mellowfleet.Clustermap;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
@@ -361,15 +348,14 @@
 				minimumVersion = 2.9.1;
 			};
 		};
-		578657542E51466A0085E37F /* XCRemoteSwiftPackageReference "Yams" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/jpsim/Yams";
-			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 6.1.0;
-			};
-		};
 /* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCLocalSwiftPackageReference section */
+		578657542E51466A0085E37F /* XCLocalSwiftPackageReference "../ClustermapCore" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = ../ClustermapCore;
+		};
+/* End XCLocalSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
 		5A506500000000000000002 /* Sparkle */ = {
@@ -377,10 +363,9 @@
 			package = 5A506500000000000000003 /* XCRemoteSwiftPackageReference "Sparkle" */;
 			productName = Sparkle;
 		};
-		578657552E51466B0085E37F /* Yams */ = {
+		578657552E51466B0085E37F /* ClustermapCore */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = 578657542E51466A0085E37F /* XCRemoteSwiftPackageReference "Yams" */;
-			productName = Yams;
+			productName = ClustermapCore;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};
